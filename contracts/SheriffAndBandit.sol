@@ -14,7 +14,7 @@ import "./ISeed.sol";
 contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausable {
 
     // mint price
-    uint256 public MINT_PRICE = 1.7 ether;
+    uint256 public MINT_PRICE = 0.3 ether;
     // max number of tokens that can be minted - 50000 in production
     uint256 public immutable MAX_TOKENS;
     // number of tokens that can be claimed for free - 20% of MAX_TOKENS
@@ -38,8 +38,6 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
 
     bool private _reentrant = false;
 
-    address public swapper;
-
     modifier nonReentrant() {
         require(!_reentrant, "No reentrancy");
         _reentrant = true;
@@ -62,14 +60,6 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
         randomSource = _seed;
     }
 
-    function mintOldTokens(address oldGame, uint256 id, address ownr) external {
-        require(msg.sender == swapper, "Only swapper");
-
-        tokenTraits[id] = ISheriffAndBandit(oldGame).getTokenTraits(id);
-        minted++;
-        _safeMint(ownr,id);
-    }
-
     /***EXTERNAL */
 
     /**
@@ -88,7 +78,7 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
             require(msg.value == 0);
         }
 
-        uint256 totalLootCost = 0;
+        uint256 totalWestCost = 0;
         uint16[] memory tokenIds = new uint16[](amount);
         address[] memory owners = new address[](amount);
         uint256 seed;
@@ -100,7 +90,7 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
             randomSource.update(minted ^ seed);
             generate(minted, seed);
             address recipient = selectRecipient(seed);
-            totalLootCost += mintCost(minted);
+            totalWestCost += mintCost(minted);
             if (!stake || recipient != _msgSender()) {
                 owners[i] = recipient;
             } else {
@@ -110,7 +100,7 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
 
         }
 
-        if (totalLootCost > 0) west.burn(_msgSender(), totalLootCost);
+        if (totalWestCost > 0) west.burn(_msgSender(), totalWestCost);
 
         for (uint i = 0; i < owners.length; i++) {
             uint id = firstMinted + i + 1;
@@ -122,7 +112,7 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
     }
 
     /**
-     * the first 20% are paid in AVAX
+     * the first 20% are paid in BNB
      * the next 20% are 20000 $WEST
      * the next 40% are 40000 $WEST
      * the final 20% are 80000 $WEST
@@ -316,9 +306,5 @@ contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausa
 
     function setTraits(ITraits addr) public onlyOwner {
         traits = addr;
-    }
-
-    function setSwapper(address _sw) public onlyOwner {
-        swapper = _sw;
     }
 }

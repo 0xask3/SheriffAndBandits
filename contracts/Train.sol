@@ -55,7 +55,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     uint256 public public_start_time = 0;
 
     // amount of $WEST earned so far
-    uint256 public totalLootEarned;
+    uint256 public totalWestEarned;
     // number of Bandit staked in the Train
     uint256 public totalBanditStaked;
     // the last time $WEST was claimed
@@ -86,9 +86,9 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     }
 
 
-    function setOldTrainStats(uint256 _lastClaimTimestamp, uint256 _totalLootEarned) public onlyOwner {
+    function setOldTrainStats(uint256 _lastClaimTimestamp, uint256 _totalWestEarned) public onlyOwner {
         lastClaimTimestamp = _lastClaimTimestamp;
-        totalLootEarned = _totalLootEarned;
+        totalWestEarned = _totalWestEarned;
     }
 
     /***STAKING */
@@ -134,7 +134,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     }
 
     function _addBanditToTrainWithTime(address account, uint256 tokenId, uint256 time) internal {
-        totalLootEarned += (time - lastClaimTimestamp) * totalBanditStaked * DAILY_WEST_RATE / 1 days;
+        totalWestEarned += (time - lastClaimTimestamp) * totalBanditStaked * DAILY_WEST_RATE / 1 days;
 
         train[tokenId] = Stake({
         owner : account,
@@ -201,7 +201,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         Stake memory stake = train[tokenId];
         require(stake.owner == _msgSender(), "SWIPER, NO SWIPING");
         require(!(unstake && block.timestamp - stake.value < MINIMUM_TO_EXIT), "GONNA BE COLD WITHOUT TWO DAY'S WEST");
-        if (totalLootEarned < MAXIMUM_GLOBAL_WEST) {
+        if (totalWestEarned < MAXIMUM_GLOBAL_WEST) {
             owed = (block.timestamp - stake.value) * DAILY_WEST_RATE / 1 days;
         } else if (stake.value > lastClaimTimestamp) {
             owed = 0;
@@ -334,8 +334,8 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
      * tracks $WEST earnings to ensure it stops once 2.4 billion is eclipsed
      */
     modifier _updateEarnings() {
-        if (totalLootEarned < MAXIMUM_GLOBAL_WEST) {
-            totalLootEarned +=
+        if (totalWestEarned < MAXIMUM_GLOBAL_WEST) {
+            totalWestEarned +=
             (block.timestamp - lastClaimTimestamp)
             * totalBanditStaked
             * DAILY_WEST_RATE / 1 days;
