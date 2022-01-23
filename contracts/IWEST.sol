@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-interface ILOOT  {
+interface IWEST  {
 
     function burn(address from, uint256 amount) external;
 }

@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/interfaces/IERC721Receiver.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
-import "./PoliceAndThief2.sol";
-import "./LOOT.sol";
-import "./IBank.sol";
+import "./SheriffAndBandit.sol";
+import "./WEST.sol";
+import "./ITrain.sol";
 
-contract Bank3 is Ownable, IERC721Receiver, Pausable {
+contract Train3 is Ownable, IERC721Receiver, Pausable {
 
-    // maximum alpha score for a Police
+    // maximum alpha score for a Sheriff
     uint8 public constant MAX_ALPHA = 8;
 
     // struct to store a stake's token, owner, and earning values
@@ -21,47 +21,47 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
     }
 
     event TokenStaked(address owner, uint256 tokenId, uint256 value);
-    event ThiefClaimed(uint256 tokenId, uint256 earned, bool unstaked);
-    event PoliceClaimed(uint256 tokenId, uint256 earned, bool unstaked);
+    event BanditClaimed(uint256 tokenId, uint256 earned, bool unstaked);
+    event SheriffClaimed(uint256 tokenId, uint256 earned, bool unstaked);
 
-    // reference to the PoliceAndThief NFT contract
-    PoliceAndThief2 game;
-    // reference to the $LOOT contract for minting $LOOT earnings
-    LOOT loot;
+    // reference to the SheriffAndBandit NFT contract
+    SheriffAndBandit game;
+    // reference to the $WEST contract for minting $WEST earnings
+    WEST west;
 
     // maps tokenId to stake
-    mapping(uint256 => Stake) public bank;
-    // maps alpha to all Police stakes with that alpha
+    mapping(uint256 => Stake) public train;
+    // maps alpha to all Sheriff stakes with that alpha
     mapping(uint256 => Stake[]) public pack;
-    // tracks location of each Police in Pack
+    // tracks location of each Sheriff in Pack
     mapping(uint256 => uint256) public packIndices;
     // total alpha scores staked
     uint256 public totalAlphaStaked = 0;
     // any rewards distributed when no wolves are staked
     uint256 public unaccountedRewards = 0;
-    // amount of $LOOT due for each alpha point staked
-    uint256 public lootPerAlpha = 0;
+    // amount of $WEST due for each alpha point staked
+    uint256 public westPerAlpha = 0;
 
-    // thief earn 10000 $LOOT per day
-    uint256 public DAILY_LOOT_RATE = 10000 ether;
-    // thief must have 2 days worth of $LOOT to unstake or else it's too cold
+    // bandit earn 10000 $WEST per day
+    uint256 public DAILY_WEST_RATE = 10000 ether;
+    // bandit must have 2 days worth of $WEST to unstake or else it's too cold
     uint256 public MINIMUM_TO_EXIT = 2 days;
-    // wolves take a 20% tax on all $LOOT claimed
-    uint256 public constant LOOT_CLAIM_TAX_PERCENTAGE = 20;
-    // there will only ever be (roughly) 2.4 billion $LOOT earned through staking
-    uint256 public constant MAXIMUM_GLOBAL_LOOT = 2400000000 ether;
+    // wolves take a 20% tax on all $WEST claimed
+    uint256 public constant WEST_CLAIM_TAX_PERCENTAGE = 20;
+    // there will only ever be (roughly) 2.4 billion $WEST earned through staking
+    uint256 public constant MAXIMUM_GLOBAL_WEST = 2400000000 ether;
 
     uint256 public whitelist_start_time = 0;
     uint256 public public_start_time = 0;
 
-    // amount of $LOOT earned so far
+    // amount of $WEST earned so far
     uint256 public totalLootEarned;
-    // number of Thief staked in the Bank
-    uint256 public totalThiefStaked;
-    // the last time $LOOT was claimed
+    // number of Bandit staked in the Train
+    uint256 public totalBanditStaked;
+    // the last time $WEST was claimed
     uint256 public lastClaimTimestamp;
 
-    // emergency rescue to allow unstaking without any checks but without $LOOT
+    // emergency rescue to allow unstaking without any checks but without $WEST
     bool public rescueEnabled = false;
 
     bool private _reentrant = false;
@@ -74,53 +74,31 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
         _reentrant = false;
     }
 
-    IBank public oldBank;
-    address public swapper;
-
     uint256 oldLastClaimTimestamp;
 
     /**
-     * @param _game reference to the PoliceAndThief NFT contract
-   * @param _loot reference to the $LOOT token
+     * @param _game reference to the SheriffAndBandit NFT contract
+   * @param _west reference to the $WEST token
    */
-    constructor(PoliceAndThief2 _game, LOOT _loot, IBank _oldBank, address _swapper) {
+    constructor(SheriffAndBandit _game, WEST _west) {
         game = _game;
-        loot = _loot;
-
-        oldBank = _oldBank;
-        swapper = _swapper;
+        west = _west;
     }
 
-//    function setOldBankStats() public onlyOwner {
-//        lastClaimTimestamp = oldBank.lastClaimTimestamp();
-//        oldLastClaimTimestamp = lastClaimTimestamp;
-//        totalLootEarned = oldBank.totalLootEarned();
-//    }
 
-    function setOldBankStats(uint256 _lastClaimTimestamp, uint256 _totalLootEarned) public onlyOwner {
+    function setOldTrainStats(uint256 _lastClaimTimestamp, uint256 _totalLootEarned) public onlyOwner {
         lastClaimTimestamp = _lastClaimTimestamp;
         totalLootEarned = _totalLootEarned;
-    }
-
-    function setOldTokenInfo(uint256 _tokenId, bool _isThief, address _tokenOwner, uint256 _value) external {
-        require(msg.sender == swapper || msg.sender == owner(), "only swpr || owner");
-
-        if (_isThief) {
-            _addThiefToBankWithTime(_tokenOwner, _tokenId, _value);
-        }
-        else {
-            _addPoliceToPack(_tokenOwner, _tokenId);
-        }
     }
 
     /***STAKING */
 
     /**
-     * adds Thief and Polices to the Bank and Pack
+     * adds Bandit and Sheriffs to the Train and Pack
      * @param account the address of the staker
-   * @param tokenIds the IDs of the Thief and Polices to stake
+   * @param tokenIds the IDs of the Bandit and Sheriffs to stake
    */
-    function addManyToBankAndPack(address account, uint16[] calldata tokenIds) external whenNotPaused nonReentrant {
+    function addManyToTrainAndPack(address account, uint16[] calldata tokenIds) external whenNotPaused nonReentrant {
         require((account == _msgSender() && account == tx.origin) || _msgSender() == address(game), "DONT GIVE YOUR TOKENS AWAY");
 
         for (uint i = 0; i < tokenIds.length; i++) {
@@ -133,151 +111,151 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
                 game.transferFrom(_msgSender(), address(this), tokenIds[i]);
             }
 
-            if (isThief(tokenIds[i]))
-                _addThiefToBank(account, tokenIds[i]);
+            if (isBandit(tokenIds[i]))
+                _addBanditToTrain(account, tokenIds[i]);
             else
-                _addPoliceToPack(account, tokenIds[i]);
+                _addSheriffToPack(account, tokenIds[i]);
         }
     }
 
     /**
-     * adds a single Thief to the Bank
+     * adds a single Bandit to the Train
      * @param account the address of the staker
-   * @param tokenId the ID of the Thief to add to the Bank
+   * @param tokenId the ID of the Bandit to add to the Train
    */
-    function _addThiefToBank(address account, uint256 tokenId) internal whenNotPaused _updateEarnings {
-        bank[tokenId] = Stake({
+    function _addBanditToTrain(address account, uint256 tokenId) internal whenNotPaused _updateEarnings {
+        train[tokenId] = Stake({
         owner : account,
         tokenId : uint16(tokenId),
         value : uint80(block.timestamp)
         });
-        totalThiefStaked += 1;
+        totalBanditStaked += 1;
         emit TokenStaked(account, tokenId, block.timestamp);
     }
 
-    function _addThiefToBankWithTime(address account, uint256 tokenId, uint256 time) internal {
-        totalLootEarned += (time - lastClaimTimestamp) * totalThiefStaked * DAILY_LOOT_RATE / 1 days;
+    function _addBanditToTrainWithTime(address account, uint256 tokenId, uint256 time) internal {
+        totalLootEarned += (time - lastClaimTimestamp) * totalBanditStaked * DAILY_WEST_RATE / 1 days;
 
-        bank[tokenId] = Stake({
+        train[tokenId] = Stake({
         owner : account,
         tokenId : uint16(tokenId),
         value : uint80(time)
         });
-        totalThiefStaked += 1;
+        totalBanditStaked += 1;
         emit TokenStaked(account, tokenId, time);
     }
 
     /**
-     * adds a single Police to the Pack
+     * adds a single Sheriff to the Pack
      * @param account the address of the staker
-   * @param tokenId the ID of the Police to add to the Pack
+   * @param tokenId the ID of the Sheriff to add to the Pack
    */
-    function _addPoliceToPack(address account, uint256 tokenId) internal {
-        uint256 alpha = _alphaForPolice(tokenId);
+    function _addSheriffToPack(address account, uint256 tokenId) internal {
+        uint256 alpha = _alphaForSheriff(tokenId);
         totalAlphaStaked += alpha;
         // Portion of earnings ranges from 8 to 5
         packIndices[tokenId] = pack[alpha].length;
 
-        // Store the location of the police in the Pack
+        // Store the location of the sheriff in the Pack
         pack[alpha].push(Stake({
         owner : account,
         tokenId : uint16(tokenId),
-        value : uint80(lootPerAlpha)
+        value : uint80(westPerAlpha)
         }));
-        // Add the police to the Pack
-        emit TokenStaked(account, tokenId, lootPerAlpha);
+        // Add the sheriff to the Pack
+        emit TokenStaked(account, tokenId, westPerAlpha);
     }
 
     /***CLAIMING / UNSTAKING */
 
     /**
-     * realize $LOOT earnings and optionally unstake tokens from the Bank / Pack
-     * to unstake a Thief it will require it has 2 days worth of $LOOT unclaimed
+     * realize $WEST earnings and optionally unstake tokens from the Train / Pack
+     * to unstake a Bandit it will require it has 2 days worth of $WEST unclaimed
      * @param tokenIds the IDs of the tokens to claim earnings from
    * @param unstake whether or not to unstake ALL of the tokens listed in tokenIds
    */
-    function claimManyFromBankAndPack(uint16[] calldata tokenIds, bool unstake) external nonReentrant _updateEarnings {
+    function claimManyFromTrainAndPack(uint16[] calldata tokenIds, bool unstake) external nonReentrant _updateEarnings {
         require(msg.sender == tx.origin, "Only EOA");
         require(canClaim, "Claim deactive");
 
         uint256 owed = 0;
         for (uint i = 0; i < tokenIds.length; i++) {
-            if (isThief(tokenIds[i]))
-                owed += _claimThiefFromBank(tokenIds[i], unstake);
+            if (isBandit(tokenIds[i]))
+                owed += _claimBanditFromTrain(tokenIds[i], unstake);
             else
-                owed += _claimPoliceFromPack(tokenIds[i], unstake);
+                owed += _claimSheriffFromPack(tokenIds[i], unstake);
         }
         if (owed == 0) return;
-        loot.mint(_msgSender(), owed);
+        west.mint(_msgSender(), owed);
     }
 
     /**
-     * realize $LOOT earnings for a single Thief and optionally unstake it
-     * if not unstaking, pay a 20% tax to the staked Polices
-     * if unstaking, there is a 50% chance all $LOOT is stolen
-     * @param tokenId the ID of the Thief to claim earnings from
-   * @param unstake whether or not to unstake the Thief
-   * @return owed - the amount of $LOOT earned
+     * realize $WEST earnings for a single Bandit and optionally unstake it
+     * if not unstaking, pay a 20% tax to the staked Sheriffs
+     * if unstaking, there is a 50% chance all $WEST is stolen
+     * @param tokenId the ID of the Bandit to claim earnings from
+   * @param unstake whether or not to unstake the Bandit
+   * @return owed - the amount of $WEST earned
    */
-    function _claimThiefFromBank(uint256 tokenId, bool unstake) internal returns (uint256 owed) {
-        Stake memory stake = bank[tokenId];
+    function _claimBanditFromTrain(uint256 tokenId, bool unstake) internal returns (uint256 owed) {
+        Stake memory stake = train[tokenId];
         require(stake.owner == _msgSender(), "SWIPER, NO SWIPING");
-        require(!(unstake && block.timestamp - stake.value < MINIMUM_TO_EXIT), "GONNA BE COLD WITHOUT TWO DAY'S LOOT");
-        if (totalLootEarned < MAXIMUM_GLOBAL_LOOT) {
-            owed = (block.timestamp - stake.value) * DAILY_LOOT_RATE / 1 days;
+        require(!(unstake && block.timestamp - stake.value < MINIMUM_TO_EXIT), "GONNA BE COLD WITHOUT TWO DAY'S WEST");
+        if (totalLootEarned < MAXIMUM_GLOBAL_WEST) {
+            owed = (block.timestamp - stake.value) * DAILY_WEST_RATE / 1 days;
         } else if (stake.value > lastClaimTimestamp) {
             owed = 0;
-            // $LOOT production stopped already
+            // $WEST production stopped already
         } else {
-            owed = (lastClaimTimestamp - stake.value) * DAILY_LOOT_RATE / 1 days;
-            // stop earning additional $LOOT if it's all been earned
+            owed = (lastClaimTimestamp - stake.value) * DAILY_WEST_RATE / 1 days;
+            // stop earning additional $WEST if it's all been earned
         }
         if (unstake) {
-            if (random(tokenId) & 1 == 1) {// 50% chance of all $LOOT stolen
-                _payPoliceTax(owed);
+            if (random(tokenId) & 1 == 1) {// 50% chance of all $WEST stolen
+                _paySheriffTax(owed);
                 owed = 0;
             }
             game.transferFrom(address(this), _msgSender(), tokenId);
-            // send back Thief
-            delete bank[tokenId];
-            totalThiefStaked -= 1;
+            // send back Bandit
+            delete train[tokenId];
+            totalBanditStaked -= 1;
         } else {
-            _payPoliceTax(owed * LOOT_CLAIM_TAX_PERCENTAGE / 100);
+            _paySheriffTax(owed * WEST_CLAIM_TAX_PERCENTAGE / 100);
             // percentage tax to staked wolves
-            owed = owed * (100 - LOOT_CLAIM_TAX_PERCENTAGE) / 100;
-            // remainder goes to Thief owner
-            bank[tokenId] = Stake({
+            owed = owed * (100 - WEST_CLAIM_TAX_PERCENTAGE) / 100;
+            // remainder goes to Bandit owner
+            train[tokenId] = Stake({
             owner : _msgSender(),
             tokenId : uint16(tokenId),
             value : uint80(block.timestamp)
             });
             // reset stake
         }
-        emit ThiefClaimed(tokenId, owed, unstake);
+        emit BanditClaimed(tokenId, owed, unstake);
     }
 
     /**
-     * realize $LOOT earnings for a single Police and optionally unstake it
-     * Polices earn $LOOT proportional to their Alpha rank
-     * @param tokenId the ID of the Police to claim earnings from
-   * @param unstake whether or not to unstake the Police
-   * @return owed - the amount of $LOOT earned
+     * realize $WEST earnings for a single Sheriff and optionally unstake it
+     * Sheriffs earn $WEST proportional to their Alpha rank
+     * @param tokenId the ID of the Sheriff to claim earnings from
+   * @param unstake whether or not to unstake the Sheriff
+   * @return owed - the amount of $WEST earned
    */
-    function _claimPoliceFromPack(uint256 tokenId, bool unstake) internal returns (uint256 owed) {
+    function _claimSheriffFromPack(uint256 tokenId, bool unstake) internal returns (uint256 owed) {
         require(game.ownerOf(tokenId) == address(this), "AINT A PART OF THE PACK");
-        uint256 alpha = _alphaForPolice(tokenId);
+        uint256 alpha = _alphaForSheriff(tokenId);
         Stake memory stake = pack[alpha][packIndices[tokenId]];
         require(stake.owner == _msgSender(), "SWIPER, NO SWIPING");
-        owed = (alpha) * (lootPerAlpha - stake.value);
+        owed = (alpha) * (westPerAlpha - stake.value);
         // Calculate portion of tokens based on Alpha
         if (unstake) {
             totalAlphaStaked -= alpha;
             // Remove Alpha from total staked
             game.transferFrom(address(this), _msgSender(), tokenId);
-            // Send back Police
+            // Send back Sheriff
             Stake memory lastStake = pack[alpha][pack[alpha].length - 1];
             pack[alpha][packIndices[tokenId]] = lastStake;
-            // Shuffle last Police to current position
+            // Shuffle last Sheriff to current position
             packIndices[lastStake.tokenId] = packIndices[tokenId];
             pack[alpha].pop();
             // Remove duplicate
@@ -287,11 +265,11 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
             pack[alpha][packIndices[tokenId]] = Stake({
             owner : _msgSender(),
             tokenId : uint16(tokenId),
-            value : uint80(lootPerAlpha)
+            value : uint80(westPerAlpha)
             });
             // reset stake
         }
-        emit PoliceClaimed(tokenId, owed, unstake);
+        emit SheriffClaimed(tokenId, owed, unstake);
     }
 
     /**
@@ -306,31 +284,31 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
         uint256 alpha;
         for (uint i = 0; i < tokenIds.length; i++) {
             tokenId = tokenIds[i];
-            if (isThief(tokenId)) {
-                stake = bank[tokenId];
+            if (isBandit(tokenId)) {
+                stake = train[tokenId];
                 require(stake.owner == _msgSender(), "SWIPER, NO SWIPING");
                 game.transferFrom(address(this), _msgSender(), tokenId);
-                // send back Thief
-                delete bank[tokenId];
-                totalThiefStaked -= 1;
-                emit ThiefClaimed(tokenId, 0, true);
+                // send back Bandit
+                delete train[tokenId];
+                totalBanditStaked -= 1;
+                emit BanditClaimed(tokenId, 0, true);
             } else {
-                alpha = _alphaForPolice(tokenId);
+                alpha = _alphaForSheriff(tokenId);
                 stake = pack[alpha][packIndices[tokenId]];
                 require(stake.owner == _msgSender(), "SWIPER, NO SWIPING");
                 totalAlphaStaked -= alpha;
                 // Remove Alpha from total staked
                 game.transferFrom(address(this), _msgSender(), tokenId);
-                // Send back Police
+                // Send back Sheriff
                 lastStake = pack[alpha][pack[alpha].length - 1];
                 pack[alpha][packIndices[tokenId]] = lastStake;
-                // Shuffle last Police to current position
+                // Shuffle last Sheriff to current position
                 packIndices[lastStake.tokenId] = packIndices[tokenId];
                 pack[alpha].pop();
                 // Remove duplicate
                 delete packIndices[tokenId];
                 // Delete old mapping
-                emit PoliceClaimed(tokenId, 0, true);
+                emit SheriffClaimed(tokenId, 0, true);
             }
         }
     }
@@ -338,29 +316,29 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
     /***ACCOUNTING */
 
     /**
-     * add $LOOT to claimable pot for the Pack
-     * @param amount $LOOT to add to the pot
+     * add $WEST to claimable pot for the Pack
+     * @param amount $WEST to add to the pot
    */
-    function _payPoliceTax(uint256 amount) internal {
+    function _paySheriffTax(uint256 amount) internal {
         if (totalAlphaStaked == 0) {// if there's no staked wolves
             unaccountedRewards += amount;
-            // keep track of $LOOT due to wolves
+            // keep track of $WEST due to wolves
             return;
         }
-        // makes sure to include any unaccounted $LOOT
-        lootPerAlpha += (amount + unaccountedRewards) / totalAlphaStaked;
+        // makes sure to include any unaccounted $WEST
+        westPerAlpha += (amount + unaccountedRewards) / totalAlphaStaked;
         unaccountedRewards = 0;
     }
 
     /**
-     * tracks $LOOT earnings to ensure it stops once 2.4 billion is eclipsed
+     * tracks $WEST earnings to ensure it stops once 2.4 billion is eclipsed
      */
     modifier _updateEarnings() {
-        if (totalLootEarned < MAXIMUM_GLOBAL_LOOT) {
+        if (totalLootEarned < MAXIMUM_GLOBAL_WEST) {
             totalLootEarned +=
             (block.timestamp - lastClaimTimestamp)
-            * totalThiefStaked
-            * DAILY_LOOT_RATE / 1 days;
+            * totalBanditStaked
+            * DAILY_WEST_RATE / 1 days;
             lastClaimTimestamp = block.timestamp;
         }
         _;
@@ -370,7 +348,7 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
 
     function setSettings(uint256 rate, uint256 exit) external onlyOwner {
         MINIMUM_TO_EXIT = exit;
-        DAILY_LOOT_RATE = rate;
+        DAILY_WEST_RATE = rate;
     }
 
     /**
@@ -392,42 +370,42 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
     /***READ ONLY */
 
     /**
-     * checks if a token is a Thief
+     * checks if a token is a Bandit
      * @param tokenId the ID of the token to check
-   * @return thief - whether or not a token is a Thief
+   * @return bandit - whether or not a token is a Bandit
    */
-    function isThief(uint256 tokenId) public view returns (bool thief) {
-        (thief, , , , , , , , ) = game.tokenTraits(tokenId);
+    function isBandit(uint256 tokenId) public view returns (bool bandit) {
+        (bandit, , , , , , , , ) = game.tokenTraits(tokenId);
     }
 
     /**
-     * gets the alpha score for a Police
-     * @param tokenId the ID of the Police to get the alpha score for
-   * @return the alpha score of the Police (5-8)
+     * gets the alpha score for a Sheriff
+     * @param tokenId the ID of the Sheriff to get the alpha score for
+   * @return the alpha score of the Sheriff (5-8)
    */
-    function _alphaForPolice(uint256 tokenId) internal view returns (uint8) {
+    function _alphaForSheriff(uint256 tokenId) internal view returns (uint8) {
         (, , , , , , , , uint8 alphaIndex) = game.tokenTraits(tokenId);
         return MAX_ALPHA - alphaIndex;
         // alpha index is 0-3
     }
 
     /**
-     * chooses a random Police thief when a newly minted token is stolen
-     * @param seed a random value to choose a Police from
-   * @return the owner of the randomly selected Police thief
+     * chooses a random Sheriff bandit when a newly minted token is stolen
+     * @param seed a random value to choose a Sheriff from
+   * @return the owner of the randomly selected Sheriff bandit
    */
-    function randomPoliceOwner(uint256 seed) external view returns (address) {
+    function randomSheriffOwner(uint256 seed) external view returns (address) {
         if (totalAlphaStaked == 0) return address(0x0);
         uint256 bucket = (seed & 0xFFFFFFFF) % totalAlphaStaked;
         // choose a value from 0 to total alpha staked
         uint256 cumulative;
         seed >>= 32;
-        // loop through each bucket of Polices with the same alpha score
+        // loop through each bucket of Sheriffs with the same alpha score
         for (uint i = MAX_ALPHA - 3; i <= MAX_ALPHA; i++) {
             cumulative += pack[i].length * i;
             // if the value is not inside of that bucket, keep going
             if (bucket >= cumulative) continue;
-            // get the address of a random Police with that alpha score
+            // get the address of a random Sheriff with that alpha score
             return pack[i][seed % pack[i].length].owner;
         }
         return address(0x0);
@@ -444,7 +422,7 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
                 blockhash(block.number - 1),
                 block.timestamp,
                 seed,
-                totalThiefStaked,
+                totalBanditStaked,
                 totalAlphaStaked,
                 lastClaimTimestamp
             ))) ^ game.randomSource().seed();
@@ -460,11 +438,7 @@ contract Bank3 is Ownable, IERC721Receiver, Pausable {
         return IERC721Receiver.onERC721Received.selector;
     }
 
-    function setSwapper(address swp) public onlyOwner {
-        swapper = swp;
-    }
-
-    function setGame(PoliceAndThief2 _nGame) public onlyOwner {
+    function setGame(SheriffAndBandit _nGame) public onlyOwner {
         game = _nGame;
     }
 

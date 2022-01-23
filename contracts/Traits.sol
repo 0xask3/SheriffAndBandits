@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";
 import "./ITraits.sol";
-import "./IPoliceAndThief.sol";
+import "./ISheriffAndBandit.sol";
 
 contract Traits3 is Ownable, ITraits {
 
@@ -19,8 +19,8 @@ contract Traits3 is Ownable, ITraits {
         string png;
     }
 
-    string policeBody;
-    string thiefBody;
+    string sheriffBody;
+    string banditBody;
 
     // mapping from trait type (index) to its name
     string[9] _traitTypes = [
@@ -45,7 +45,7 @@ contract Traits3 is Ownable, ITraits {
     "5"
     ];
 
-    IPoliceAndThief public policeAndThief;
+    ISheriffAndBandit public sheriffAndBandit;
 
 
     function selectTrait(uint16 seed, uint8 traitType) external view override returns(uint8) {
@@ -67,13 +67,13 @@ contract Traits3 is Ownable, ITraits {
 
     /***ADMIN */
 
-    function setGame(address _policeAndThief) external onlyOwner {
-        policeAndThief = IPoliceAndThief(_policeAndThief);
+    function setGame(address _sheriffAndBandit) external onlyOwner {
+        sheriffAndBandit = ISheriffAndBandit(_sheriffAndBandit);
     }
 
-    function uploadBodies(string calldata _police, string calldata _thief) external onlyOwner {
-        policeBody = _police;
-        thiefBody = _thief;
+    function uploadBodies(string calldata _sheriff, string calldata _bandit) external onlyOwner {
+        sheriffBody = _sheriff;
+        banditBody = _bandit;
     }
 
     /**
@@ -124,25 +124,25 @@ contract Traits3 is Ownable, ITraits {
     /**
      * generates an entire SVG by composing multiple <image> elements of PNGs
      * @param tokenId the ID of the token to generate an SVG for
-   * @return a valid SVG of the Thief / Police
+   * @return a valid SVG of the Bandit / Sheriff
    */
     function drawSVG(uint256 tokenId) public view returns (string memory) {
-        IPoliceAndThief.ThiefPolice memory s = policeAndThief.getTokenTraits(tokenId);
-        uint8 shift = s.isThief ? 0 : 10;
+        ISheriffAndBandit.BanditSheriff memory s = sheriffAndBandit.getTokenTraits(tokenId);
+        uint8 shift = s.isBandit ? 0 : 10;
 
         string memory svgString = string(abi.encodePacked(
-                s.isThief ? draw(thiefBody) : draw(policeBody),
+                s.isBandit ? draw(banditBody) : draw(sheriffBody),
                 drawTrait(traitData[0 + shift][s.uniform % traitCountForType[0 + shift]]),
                 drawTrait(traitData[1 + shift][s.hair % traitCountForType[1 + shift]]),
                 drawTrait(traitData[2 + shift][s.facialHair % traitCountForType[2 + shift]]),
                 drawTrait(traitData[3 + shift][s.eyes % traitCountForType[3 + shift]]),
                 drawTrait(traitData[4 + shift][s.accessory % traitCountForType[4 + shift]]),
-                s.isThief ? drawTrait(traitData[5 + shift][s.headgear % traitCountForType[5 + shift]]) : drawTrait(traitData[5 + shift][s.alphaIndex]),
-                !s.isThief ? drawTrait(traitData[6 + shift][s.neckGear % traitCountForType[6 + shift]]) : ''
+                s.isBandit ? drawTrait(traitData[5 + shift][s.headgear % traitCountForType[5 + shift]]) : drawTrait(traitData[5 + shift][s.alphaIndex]),
+                !s.isBandit ? drawTrait(traitData[6 + shift][s.neckGear % traitCountForType[6 + shift]]) : ''
             ));
 
         return string(abi.encodePacked(
-                '<svg id="policeAndThief" width="100%" height="100%" version="1.1" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">',
+                '<svg id="sheriffAndBandit" width="100%" height="100%" version="1.1" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">',
                 svgString,
                 "</svg>"
             ));
@@ -170,9 +170,9 @@ contract Traits3 is Ownable, ITraits {
    * @return a JSON array of all of the attributes for given token ID
    */
     function compileAttributes(uint256 tokenId) public view returns (string memory) {
-        IPoliceAndThief.ThiefPolice memory s = policeAndThief.getTokenTraits(tokenId);
+        ISheriffAndBandit.BanditSheriff memory s = sheriffAndBandit.getTokenTraits(tokenId);
         string memory traits;
-        if (s.isThief) {
+        if (s.isBandit) {
             traits = string(abi.encodePacked(
                     attributeForTypeAndValue(_traitTypes[1], traitData[0][s.uniform % traitCountForType[0]].name), ',',
                     attributeForTypeAndValue(_traitTypes[2], traitData[1][s.hair % traitCountForType[1]].name), ',',
@@ -197,9 +197,9 @@ contract Traits3 is Ownable, ITraits {
                 '[',
                 traits,
                 '{"trait_type":"Generation","value":',
-                tokenId <= policeAndThief.getPaidTokens() ? '"Gen 0"' : '"Gen 1"',
+                tokenId <= sheriffAndBandit.getPaidTokens() ? '"Gen 0"' : '"Gen 1"',
                 '},{"trait_type":"Type","value":',
-                s.isThief ? '"Thief"' : '"Police"',
+                s.isBandit ? '"Bandit"' : '"Sheriff"',
                 '}]'
             ));
     }
@@ -210,13 +210,13 @@ contract Traits3 is Ownable, ITraits {
    * @return a base64 encoded JSON dictionary of the token's metadata and SVG
    */
     function tokenURI(uint256 tokenId) public view override returns (string memory) {
-        IPoliceAndThief.ThiefPolice memory s = policeAndThief.getTokenTraits(tokenId);
+        ISheriffAndBandit.BanditSheriff memory s = sheriffAndBandit.getTokenTraits(tokenId);
 
         string memory metadata = string(abi.encodePacked(
                 '{"name": "',
-                s.isThief ? 'Thief #' : 'Police #',
+                s.isBandit ? 'Bandit #' : 'Sheriff #',
                 tokenId.toString(),
-                '", "description": "Police & Thief Game is a new generation play-to-earn NFT game on Avalanche that incorporates probability-based derivatives alongside NFTs. Through a vast array of choices and decision-making possibilities, Police & Thief Game promises to instil excitement and curiosity amongst the community as every individual adopts different strategies to do better than one another and to come out on top. The real question is, are you #TeamThief or #TeamPolice? Choose wisely or watch the other get rich!", "image": "data:image/svg+xml;base64,',
+                '", "description": "Sheriff & Bandit Game is a new generation play-to-earn NFT game on Avalanche that incorporates probability-based derivatives alongside NFTs. Through a vast array of choices and decision-making possibilities, Sheriff & Bandit Game promises to instil excitement and curiosity amongst the community as every individual adopts different strategies to do better than one another and to come out on top. The real question is, are you #TeamBandit or #TeamSheriff? Choose wisely or watch the other get rich!", "image": "data:image/svg+xml;base64,',
                 base64(bytes(drawSVG(tokenId))),
                 '", "attributes":',
                 compileAttributes(tokenId),

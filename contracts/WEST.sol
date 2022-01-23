@@ -5,17 +5,17 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract LOOT is ERC20, Ownable {
+contract WEST is ERC20, Ownable {
 
     // a mapping from an address to whether or not it can mint / burn
     mapping(address => bool) controllers;
 
-    constructor() ERC20("LOOT", "LOOT") { }
+    constructor() ERC20("WEST", "WEST") { }
 
     /**
-     * mints $LOOT to a recipient
-     * @param to the recipient of the $LOOT
-   * @param amount the amount of $LOOT to mint
+     * mints $WEST to a recipient
+     * @param to the recipient of the $WEST
+   * @param amount the amount of $WEST to mint
    */
     function mint(address to, uint256 amount) external {
         require(controllers[msg.sender], "Only controllers can mint");
@@ -23,9 +23,9 @@ contract LOOT is ERC20, Ownable {
     }
 
     /**
-     * burns $LOOT from a holder
-     * @param from the holder of the $LOOT
-   * @param amount the amount of $LOOT to burn
+     * burns $WEST from a holder
+     * @param from the holder of the $WEST
+   * @param amount the amount of $WEST to burn
    */
     function burn(address from, uint256 amount) external {
         require(controllers[msg.sender], "Only controllers can burn");

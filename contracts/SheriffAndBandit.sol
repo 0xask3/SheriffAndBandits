@@ -5,13 +5,13 @@ pragma solidity ^0.8.0;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/Pausable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
-import "./IPoliceAndThief.sol";
-import "./IBank.sol";
+import "./ISheriffAndBandit.sol";
+import "./ITrain.sol";
 import "./ITraits.sol";
-import "./ILOOT.sol";
+import "./IWEST.sol";
 import "./ISeed.sol";
 
-contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable {
+contract SheriffAndBandit is ISheriffAndBandit, ERC721Enumerable, Ownable, Pausable {
 
     // mint price
     uint256 public MINT_PRICE = 1.7 ether;
@@ -23,14 +23,14 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
     uint16 public minted;
 
     // mapping from tokenId to a struct containing the token's traits
-    mapping(uint256 => ThiefPolice) public tokenTraits;
+    mapping(uint256 => BanditSheriff) public tokenTraits;
     // mapping from hashed(tokenTrait) to the tokenId it's associated with
     // used to ensure there are no duplicates
     mapping(uint256 => uint256) public existingCombinations;
-    // reference to the Bank for choosing random Police thieves
-    IBank public bank;
-    // reference to $LOOT for burning on mint
-    ILOOT public loot;
+    // reference to the Train for choosing random Sheriff bandits
+    ITrain public train;
+    // reference to $WEST for burning on mint
+    IWEST public west;
     // reference to Traits
     ITraits public traits;
 
@@ -50,8 +50,8 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
     /**
      * instantiates contract and rarity tables
      */
-    constructor(ILOOT _loot, ITraits _traits, uint256 _maxTokens) ERC721("Police & Thief Game", 'POLICE') {
-        loot = _loot;
+    constructor(IWEST _west, ITraits _traits, uint256 _maxTokens) ERC721("Sheriff & Bandit Game", 'SHERIFF') {
+        west = _west;
         traits = _traits;
 
         MAX_TOKENS = _maxTokens;
@@ -65,7 +65,7 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
     function mintOldTokens(address oldGame, uint256 id, address ownr) external {
         require(msg.sender == swapper, "Only swapper");
 
-        tokenTraits[id] = IPoliceAndThief(oldGame).getTokenTraits(id);
+        tokenTraits[id] = ISheriffAndBandit(oldGame).getTokenTraits(id);
         minted++;
         _safeMint(ownr,id);
     }
@@ -73,8 +73,8 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
     /***EXTERNAL */
 
     /**
-     * mint a token - 90% Thief, 10% Polices
-     * The first 20% are free to claim, the remaining cost $LOOT
+     * mint a token - 90% Bandit, 10% Sheriffs
+     * The first 20% are free to claim, the remaining cost $WEST
      */
     function mint(uint256 amount, bool stake) external payable nonReentrant whenNotPaused {
         require(tx.origin == _msgSender(), "Only EOA");
@@ -105,12 +105,12 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
                 owners[i] = recipient;
             } else {
                 tokenIds[i] = minted;
-                owners[i] = address(bank);
+                owners[i] = address(train);
             }
 
         }
 
-        if (totalLootCost > 0) loot.burn(_msgSender(), totalLootCost);
+        if (totalLootCost > 0) west.burn(_msgSender(), totalLootCost);
 
         for (uint i = 0; i < owners.length; i++) {
             uint id = firstMinted + i + 1;
@@ -118,14 +118,14 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
                 _safeMint(owners[i], id);
             }
         }
-        if (stake) bank.addManyToBankAndPack(_msgSender(), tokenIds);
+        if (stake) train.addManyToTrainAndPack(_msgSender(), tokenIds);
     }
 
     /**
      * the first 20% are paid in AVAX
-     * the next 20% are 20000 $LOOT
-     * the next 40% are 40000 $LOOT
-     * the final 20% are 80000 $LOOT
+     * the next 20% are 20000 $WEST
+     * the next 40% are 40000 $WEST
+     * the final 20% are 80000 $WEST
      * @param tokenId the ID to check the cost of to mint
    * @return the cost of the given token ID
    */
@@ -141,8 +141,8 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
         address to,
         uint256 tokenId
     ) public virtual override nonReentrant {
-        // Hardcode the Bank's approval so that users don't have to waste gas approving
-        if (_msgSender() != address(bank))
+        // Hardcode the Train's approval so that users don't have to waste gas approving
+        if (_msgSender() != address(train))
             require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721: transfer caller is not owner nor approved");
         _transfer(from, to, tokenId);
     }
@@ -155,7 +155,7 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
    * @param seed a pseudorandom 256 bit number to derive traits from
    * @return t - a struct of traits for the given token ID
    */
-    function generate(uint256 tokenId, uint256 seed) internal returns (ThiefPolice memory t) {
+    function generate(uint256 tokenId, uint256 seed) internal returns (BanditSheriff memory t) {
         t = selectTraits(seed);
         if (existingCombinations[structToHash(t)] == 0) {
             tokenTraits[tokenId] = t;
@@ -179,17 +179,17 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
 
     /**
      * the first 20% (ETH purchases) go to the minter
-     * the remaining 80% have a 10% chance to be given to a random staked police
+     * the remaining 80% have a 10% chance to be given to a random staked sheriff
      * @param seed a random value to select a recipient from
-   * @return the address of the recipient (either the minter or the Police thief's owner)
+   * @return the address of the recipient (either the minter or the Sheriff bandit's owner)
    */
     function selectRecipient(uint256 seed) internal view returns (address) {
         if (minted <= PAID_TOKENS || ((seed >> 245) % 10) != 0) return _msgSender();
         // top 10 bits haven't been used
-        address thief = bank.randomPoliceOwner(seed >> 144);
+        address bandit = train.randomSheriffOwner(seed >> 144);
         // 144 bits reserved for trait selection
-        if (thief == address(0x0)) return _msgSender();
-        return thief;
+        if (bandit == address(0x0)) return _msgSender();
+        return bandit;
     }
 
     /**
@@ -197,9 +197,9 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
      * @param seed a pseudorandom 256 bit number to derive traits from
    * @return t -  a struct of randomly selected traits
    */
-    function selectTraits(uint256 seed) internal view returns (ThiefPolice memory t) {
-        t.isThief = (seed & 0xFFFF) % 10 != 0;
-        uint8 shift = t.isThief ? 0 : 10;
+    function selectTraits(uint256 seed) internal view returns (BanditSheriff memory t) {
+        t.isBandit = (seed & 0xFFFF) % 10 != 0;
+        uint8 shift = t.isBandit ? 0 : 10;
 
         seed >>= 16;
         t.uniform = selectTrait(uint16(seed & 0xFFFF), 0 + shift);
@@ -220,7 +220,7 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
         t.headgear = selectTrait(uint16(seed & 0xFFFF), 5 + shift);
 
         seed >>= 16;
-        if (!t.isThief) {
+        if (!t.isBandit) {
             t.neckGear = selectTrait(uint16(seed & 0xFFFF), 6 + shift);
             t.alphaIndex = selectTrait(uint16(seed & 0xFFFF), 7 + shift);
         }
@@ -231,10 +231,10 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
      * @param s the struct to pack into a hash
    * @return the 256 bit hash of the struct
    */
-    function structToHash(ThiefPolice memory s) internal pure returns (uint256) {
+    function structToHash(BanditSheriff memory s) internal pure returns (uint256) {
         return uint256(keccak256(
                 abi.encodePacked(
-                    s.isThief,
+                    s.isBandit,
                     s.uniform,
                     s.hair,
                     s.facialHair,
@@ -263,7 +263,7 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
 
     /***READ */
 
-    function getTokenTraits(uint256 tokenId) external view override returns (ThiefPolice memory) {
+    function getTokenTraits(uint256 tokenId) external view override returns (BanditSheriff memory) {
         return tokenTraits[tokenId];
     }
 
@@ -274,11 +274,11 @@ contract PoliceAndThief2 is IPoliceAndThief, ERC721Enumerable, Ownable, Pausable
     /***ADMIN */
 
     /**
-     * called after deployment so that the contract can get random police thieves
-     * @param _bank the address of the Bank
+     * called after deployment so that the contract can get random sheriff bandits
+     * @param _train the address of the Train
    */
-    function setBank(address _bank) external onlyOwner {
-        bank = IBank(_bank);
+    function setTrain(address _train) external onlyOwner {
+        train = ITrain(_train);
     }
 
     /**

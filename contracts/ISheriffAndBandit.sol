@@ -2,11 +2,11 @@
 
 pragma solidity ^0.8.0;
 
-interface IPoliceAndThief {
+interface ISheriffAndBandit {
 
     // struct to store each token's traits
-    struct ThiefPolice {
-        bool isThief;
+    struct BanditSheriff {
+        bool isBandit;
         uint8 uniform;
         uint8 hair;
         uint8 eyes;
@@ -18,5 +18,5 @@ interface IPoliceAndThief {
     }
 
     function getPaidTokens() external view returns (uint256);
-    function getTokenTraits(uint256 tokenId) external view returns (ThiefPolice memory);
+    function getTokenTraits(uint256 tokenId) external view returns (BanditSheriff memory);
 }
