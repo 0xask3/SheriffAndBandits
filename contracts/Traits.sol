@@ -11,7 +11,7 @@ contract Traits3 is Ownable, ITraits {
 
     using Strings for uint256;
 
-    uint256 private alphaTypeIndex = 17;
+    uint256 private alphaTypeIndex = 18;
 
     // struct to store each trait's data for metadata and rendering
     struct Trait {
@@ -23,16 +23,25 @@ contract Traits3 is Ownable, ITraits {
     string banditBody;
 
     // mapping from trait type (index) to its name
-    string[9] _traitTypes = [
-    "Uniform",
-    "Clothes",
-    "Hair",
-    "Facial Hair",
-    "Eyes",
-    "Headgear",
-    "Accessory",
-    "Neck Gear",
-    "Alpha"
+    string[18] _traitTypes = [
+    "BanditUniform",
+    "BanditHair",
+    "BanditEyes",
+    "BanditGun",
+    "BanditHat",
+    "BanditCigarette",
+    "BanditHandcuff",
+    "BanditMask",
+    "BanditNecklace",
+    "BanditPipe",
+    "SheriffUniform",
+    "SheriffHair",
+    "SheriffEyes",
+    "SheriffGun",
+    "SheriffHat",
+    "SheriffChain",
+    "SheriffMustache",
+    "SheriffStars"
     ];
     // storage of each traits name and base64 PNG data
     mapping(uint8 => mapping(uint8 => Trait)) public traitData;
@@ -46,7 +55,6 @@ contract Traits3 is Ownable, ITraits {
     ];
 
     ISheriffAndBandit public sheriffAndBandit;
-
 
     function selectTrait(uint16 seed, uint8 traitType) external view override returns(uint8) {
         if (traitType == alphaTypeIndex) {
@@ -83,8 +91,9 @@ contract Traits3 is Ownable, ITraits {
    */
     function uploadTraits(uint8 traitType, uint8[] calldata traitIds, Trait[] calldata traits) external onlyOwner {
         require(traitIds.length == traits.length, "Mismatched inputs");
+        uint len = traits.length;
 
-        for (uint i = 0; i < traits.length; i++) {
+        for (uint i = 0; i < len; i++) {
             traitData[traitType][traitIds[i]] = Trait(
                 traits[i].name,
                 traits[i].png
@@ -128,18 +137,36 @@ contract Traits3 is Ownable, ITraits {
    */
     function drawSVG(uint256 tokenId) public view returns (string memory) {
         ISheriffAndBandit.BanditSheriff memory s = sheriffAndBandit.getTokenTraits(tokenId);
-        uint8 shift = s.isBandit ? 0 : 10;
 
-        string memory svgString = string(abi.encodePacked(
-                s.isBandit ? draw(banditBody) : draw(sheriffBody),
-                drawTrait(traitData[0 + shift][s.uniform % traitCountForType[0 + shift]]),
-                drawTrait(traitData[1 + shift][s.hair % traitCountForType[1 + shift]]),
-                drawTrait(traitData[2 + shift][s.facialHair % traitCountForType[2 + shift]]),
-                drawTrait(traitData[3 + shift][s.eyes % traitCountForType[3 + shift]]),
-                drawTrait(traitData[4 + shift][s.accessory % traitCountForType[4 + shift]]),
-                s.isBandit ? drawTrait(traitData[5 + shift][s.headgear % traitCountForType[5 + shift]]) : drawTrait(traitData[5 + shift][s.alphaIndex]),
-                !s.isBandit ? drawTrait(traitData[6 + shift][s.neckGear % traitCountForType[6 + shift]]) : ''
+        string memory svgString;
+        if(s.isBandit){
+            svgString = string(abi.encodePacked(
+                draw(banditBody),
+                drawTrait(traitData[0][s.uniform % traitCountForType[0]]),
+                drawTrait(traitData[1][s.hair % traitCountForType[1]]),
+                drawTrait(traitData[2][s.eyes % traitCountForType[2]]),
+                drawTrait(traitData[3][s.gun % traitCountForType[3]]),
+                drawTrait(traitData[4][s.hat % traitCountForType[4]]),
+                drawTrait(traitData[5][s.bandit.cigarette % traitCountForType[5]]),
+                drawTrait(traitData[6][s.bandit.handcuff % traitCountForType[6]]),
+                drawTrait(traitData[7][s.bandit.mask % traitCountForType[7]]),
+                drawTrait(traitData[8][s.bandit.necklace % traitCountForType[8]]),
+                drawTrait(traitData[9][s.bandit.pipe % traitCountForType[9]])
             ));
+        } else {
+            svgString = string(abi.encodePacked(
+                draw(sheriffBody),
+                drawTrait(traitData[10][s.uniform % traitCountForType[10]]),
+                drawTrait(traitData[11][s.hair % traitCountForType[11]]),
+                drawTrait(traitData[12][s.eyes % traitCountForType[12]]),
+                drawTrait(traitData[13][s.gun % traitCountForType[13]]),
+                drawTrait(traitData[14][s.hat % traitCountForType[14]]),
+                drawTrait(traitData[15][s.sheriff.chain % traitCountForType[15]]),
+                drawTrait(traitData[16][s.sheriff.mustache % traitCountForType[16]]),
+                drawTrait(traitData[17][s.sheriff.stars % traitCountForType[17]])
+            ));
+        }
+        
 
         return string(abi.encodePacked(
                 '<svg id="sheriffAndBandit" width="100%" height="100%" version="1.1" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">',
@@ -174,23 +201,28 @@ contract Traits3 is Ownable, ITraits {
         string memory traits;
         if (s.isBandit) {
             traits = string(abi.encodePacked(
-                    attributeForTypeAndValue(_traitTypes[1], traitData[0][s.uniform % traitCountForType[0]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[2], traitData[1][s.hair % traitCountForType[1]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[3], traitData[2][s.facialHair % traitCountForType[2]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[4], traitData[3][s.eyes % traitCountForType[3]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[6], traitData[4][s.accessory % traitCountForType[4]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[5], traitData[5][s.headgear % traitCountForType[5]].name), ','
+                    attributeForTypeAndValue(_traitTypes[0], traitData[0][s.uniform % traitCountForType[0]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[1], traitData[1][s.hair % traitCountForType[1]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[2], traitData[2][s.eyes % traitCountForType[2]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[3], traitData[3][s.gun % traitCountForType[3]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[4], traitData[4][s.hat % traitCountForType[4]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[5], traitData[5][s.bandit.cigarette % traitCountForType[5]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[6], traitData[6][s.bandit.handcuff % traitCountForType[6]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[7], traitData[7][s.bandit.mask % traitCountForType[7]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[8], traitData[8][s.bandit.necklace % traitCountForType[8]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[9], traitData[9][s.bandit.pipe % traitCountForType[9]].name), ','
                 ));
         } else {
             traits = string(abi.encodePacked(
-                    attributeForTypeAndValue(_traitTypes[0], traitData[10][s.uniform % traitCountForType[10]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[2], traitData[11][s.hair % traitCountForType[11]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[3], traitData[12][s.facialHair % traitCountForType[12]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[4], traitData[13][s.eyes % traitCountForType[13]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[6], traitData[14][s.accessory % traitCountForType[14]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[5], traitData[15][s.alphaIndex % traitCountForType[15]].name), ',',
-                    attributeForTypeAndValue(_traitTypes[7], traitData[16][s.neckGear % traitCountForType[16]].name), ',',
-                    attributeForTypeAndValue("Alpha Score", _alphas[s.alphaIndex]), ','
+                    attributeForTypeAndValue(_traitTypes[10], traitData[10][s.uniform % traitCountForType[10]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[11], traitData[11][s.hair % traitCountForType[11]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[12], traitData[12][s.eyes % traitCountForType[12]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[13], traitData[13][s.gun % traitCountForType[13]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[14], traitData[14][s.hat % traitCountForType[14]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[15], traitData[15][s.sheriff.chain % traitCountForType[15]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[16], traitData[16][s.sheriff.mustache % traitCountForType[16]].name), ',',
+                    attributeForTypeAndValue(_traitTypes[17], traitData[17][s.sheriff.stars % traitCountForType[17]].name), ',',
+                    attributeForTypeAndValue("Alpha Score", _alphas[s.sheriff.alphaIndex]), ','
                 ));
         }
         return string(abi.encodePacked(

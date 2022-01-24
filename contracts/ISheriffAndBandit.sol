@@ -4,17 +4,31 @@ pragma solidity ^0.8.0;
 
 interface ISheriffAndBandit {
 
+    struct Bandit {
+        uint8 cigarette;
+        uint8 handcuff;
+        uint8 mask;
+        uint8 necklace;
+        uint8 pipe;
+    }
+
+    struct Sheriff {
+        uint8 chain;
+        uint8 mustache;
+        uint8 stars;
+        uint8 alphaIndex;
+    }
+
     // struct to store each token's traits
     struct BanditSheriff {
         bool isBandit;
         uint8 uniform;
         uint8 hair;
         uint8 eyes;
-        uint8 facialHair;
-        uint8 headgear;
-        uint8 neckGear;
-        uint8 accessory;
-        uint8 alphaIndex;
+        uint8 gun;
+        uint8 hat;
+        Bandit bandit;
+        Sheriff sheriff;
     }
 
     function getPaidTokens() external view returns (uint256);
