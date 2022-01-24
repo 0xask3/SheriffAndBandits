@@ -27,10 +27,8 @@ interface ISheriffAndBandit {
         uint8 eyes;
         uint8 gun;
         uint8 hat;
-        Bandit bandit;
-        Sheriff sheriff;
     }
 
     function getPaidTokens() external view returns (uint256);
-    function getTokenTraits(uint256 tokenId) external view returns (BanditSheriff memory);
+    function getTokenTraits(uint256 tokenId) external view returns (BanditSheriff memory, Sheriff memory, Bandit memory);
 }

@@ -421,7 +421,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
      * @return bandit - whether or not a token is a Bandit
      */
     function isBandit(uint256 tokenId) public view returns (bool bandit) {
-        (bandit, , , , , , , ) = game.tokenTraits(tokenId);
+        (bandit, , , , , ) = game.tokenTraits(tokenId);
     }
 
     /**
@@ -430,9 +430,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
      * @return the alpha score of the Sheriff (5-8)
      */
     function _alphaForSheriff(uint256 tokenId) internal view returns (uint8) {
-        (, , , , , , , ISheriffAndBandit.Sheriff memory s) = game.tokenTraits(
-            tokenId
-        );
+        (, ISheriffAndBandit.Sheriff memory s, ) = game.getTokenTraits(tokenId);
         uint8 alphaIndex = s.alphaIndex;
         return MAX_ALPHA - alphaIndex;
         // alpha index is 0-3

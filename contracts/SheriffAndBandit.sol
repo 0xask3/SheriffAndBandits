@@ -28,6 +28,8 @@ contract SheriffAndBandit is
 
     // mapping from tokenId to a struct containing the token's traits
     mapping(uint256 => BanditSheriff) public tokenTraits;
+    mapping(uint256 => Bandit) public banditTraits;
+    mapping(uint256 => Sheriff) public sheriffTraits;
     // mapping from hashed(tokenTrait) to the tokenId it's associated with
     // used to ensure there are no duplicates
     mapping(uint256 => uint256) public existingCombinations;
@@ -165,13 +167,13 @@ contract SheriffAndBandit is
      */
     function generate(uint256 tokenId, uint256 seed)
         internal
-        returns (BanditSheriff memory t)
+        returns (BanditSheriff memory t, Sheriff memory s, Bandit memory b)
     {
-        t = selectTraits(seed);
-        if (existingCombinations[structToHash(t)] == 0) {
+        (t,s,b) = selectTraits(seed);
+        if (existingCombinations[structToHash(t,s,b)] == 0) {
             tokenTraits[tokenId] = t;
-            existingCombinations[structToHash(t)] = tokenId;
-            return t;
+            existingCombinations[structToHash(t,s,b)] = tokenId;
+            return (t,s,b);
         }
         return generate(tokenId, random(seed));
     }
@@ -216,10 +218,9 @@ contract SheriffAndBandit is
     function selectTraits(uint256 seed)
         internal
         view
-        returns (BanditSheriff memory t)
+        returns (BanditSheriff memory t, Sheriff memory s, Bandit memory b)
     {
         t.isBandit = (seed & 0xFFFF) % 10 != 0;
-        uint8 shift = t.isBandit ? 0 : 10;
 
         if (t.isBandit) {
             seed >>= 16;
@@ -238,47 +239,47 @@ contract SheriffAndBandit is
             t.hat = selectTrait(uint16(seed & 0xFFFF), 4);
 
             seed >>= 16;
-            t.bandit.cigarette = selectTrait(uint16(seed & 0xFFFF), 5);
+            b.cigarette = selectTrait(uint16(seed & 0xFFFF), 5);
 
             seed >>= 16;
-            t.bandit.handcuff = selectTrait(uint16(seed & 0xFFFF), 6);
+            b.handcuff = selectTrait(uint16(seed & 0xFFFF), 6);
 
             seed >>= 16;
-            t.bandit.mask = selectTrait(uint16(seed & 0xFFFF), 7);
+            b.mask = selectTrait(uint16(seed & 0xFFFF), 7);
 
-            seed >>= 16;
-            t.bandit.necklace = selectTrait(uint16(seed & 0xFFFF), 8);
+            // seed >>= 16;
+            // b.necklace = selectTrait(uint16(seed & 0xFFFF), 8);
 
-            seed >>= 16;
-            t.bandit.pipe = selectTrait(uint16(seed & 0xFFFF), 9);
+            // seed >>= 16;
+            // b.pipe = selectTrait(uint16(seed & 0xFFFF), 9);
 
         } else {
             seed >>= 16;
-            t.uniform = selectTrait(uint16(seed & 0xFFFF), 10);
+            t.uniform = selectTrait(uint16(seed & 0xFFFF), 8);
 
             seed >>= 16;
-            t.hair = selectTrait(uint16(seed & 0xFFFF), 11);
+            t.hair = selectTrait(uint16(seed & 0xFFFF), 9);
 
             seed >>= 16;
-            t.eyes = selectTrait(uint16(seed & 0xFFFF), 12);
+            t.eyes = selectTrait(uint16(seed & 0xFFFF), 10);
 
             seed >>= 16;
-            t.gun = selectTrait(uint16(seed & 0xFFFF), 13);
+            t.gun = selectTrait(uint16(seed & 0xFFFF), 11);
 
             seed >>= 16;
-            t.hat = selectTrait(uint16(seed & 0xFFFF), 14);
+            t.hat = selectTrait(uint16(seed & 0xFFFF), 12);
+
+            // seed >>= 16;
+            // s.chain = selectTrait(uint16(seed & 0xFFFF), 15);
 
             seed >>= 16;
-            t.sheriff.chain = selectTrait(uint16(seed & 0xFFFF), 15);
+            s.mustache = selectTrait(uint16(seed & 0xFFFF), 13);
 
             seed >>= 16;
-            t.sheriff.mustache = selectTrait(uint16(seed & 0xFFFF), 16);
+            s.stars = selectTrait(uint16(seed & 0xFFFF), 14);
 
             seed >>= 16;
-            t.sheriff.stars = selectTrait(uint16(seed & 0xFFFF), 17);
-
-            seed >>= 16;
-            t.sheriff.alphaIndex = selectTrait(uint16(seed & 0xFFFF), 18);
+            s.alphaIndex = selectTrait(uint16(seed & 0xFFFF), 15);
 
         }
     }
@@ -288,7 +289,7 @@ contract SheriffAndBandit is
      * @param s the struct to pack into a hash
      * @return the 256 bit hash of the struct
      */
-    function structToHash(BanditSheriff memory s)
+    function structToHash(BanditSheriff memory t, Sheriff memory s, Bandit memory b)
         internal
         pure
         returns (uint256)
@@ -297,21 +298,20 @@ contract SheriffAndBandit is
             uint256(
                 keccak256(
                     abi.encodePacked(
-                        s.isBandit,
-                        s.uniform,
-                        s.hair,
-                        s.eyes,
-                        s.gun,
-                        s.hat,
-                        s.bandit.cigarette,
-                        s.bandit.handcuff,
-                        s.bandit.mask,
-                        s.bandit.necklace,
-                        s.bandit.pipe,
-                        s.sheriff.chain,
-                        s.sheriff.mustache,
-                        s.sheriff.stars,
-                        s.sheriff.alphaIndex
+                        t.isBandit,
+                        t.uniform,
+                        t.hair,
+                        t.eyes,
+                        t.gun,
+                        t.hat,
+                        b.cigarette,
+                        b.handcuff,
+                        b.mask,
+                        b.necklace,
+                        b.pipe,
+                        s.chain,
+                        s.mustache,
+                        s.stars
                     )
                 )
             );
@@ -342,9 +342,9 @@ contract SheriffAndBandit is
         external
         view
         override
-        returns (BanditSheriff memory)
+        returns (BanditSheriff memory, Sheriff memory, Bandit memory)
     {
-        return tokenTraits[tokenId];
+        return (tokenTraits[tokenId],sheriffTraits[tokenId],banditTraits[tokenId]);
     }
 
     function getPaidTokens() external view override returns (uint256) {
