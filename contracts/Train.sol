@@ -37,7 +37,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     mapping(uint256 => uint256) public packIndices;
     // total alpha scores staked
     uint256 public totalAlphaStaked = 0;
-    // any rewards distributed when no wolves are staked
+    // any rewards distributed when no sheriff are staked
     uint256 public unaccountedRewards = 0;
     // amount of $WEST due for each alpha point staked
     uint256 public westPerAlpha = 0;
@@ -46,7 +46,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     uint256 public DAILY_WEST_RATE = 10000 ether;
     // bandit must have 2 days worth of $WEST to unstake or else it's too cold
     uint256 public MINIMUM_TO_EXIT = 2 days;
-    // wolves take a 20% tax on all $WEST claimed
+    // sheriffs take a 20% tax on all $WEST claimed
     uint256 public constant WEST_CLAIM_TAX_PERCENTAGE = 20;
     // there will only ever be (roughly) 2.4 billion $WEST earned through staking
     uint256 public constant MAXIMUM_GLOBAL_WEST = 2400000000 ether;

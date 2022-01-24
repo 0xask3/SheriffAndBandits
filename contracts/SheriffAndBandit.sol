@@ -18,7 +18,7 @@ contract SheriffAndBandit is
     Pausable
 {
     // mint price
-    uint256 public MINT_PRICE = 0.3 ether;
+    uint256 public MINT_PRICE = 0.003 ether;
     // max number of tokens that can be minted - 50000 in production
     uint256 public immutable MAX_TOKENS;
     // number of tokens that can be claimed for free - 20% of MAX_TOKENS
@@ -307,11 +307,12 @@ contract SheriffAndBandit is
                         b.cigarette,
                         b.handcuff,
                         b.mask,
-                        b.necklace,
-                        b.pipe,
-                        s.chain,
+                        //b.necklace,
+                        //b.pipe,
+                        //s.chain,
                         s.mustache,
-                        s.stars
+                        s.stars,
+                        s.alphaIndex
                     )
                 )
             );

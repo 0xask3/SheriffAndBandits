@@ -8,12 +8,12 @@ interface ISheriffAndBandit {
         uint8 cigarette;
         uint8 handcuff;
         uint8 mask;
-        uint8 necklace;
-        uint8 pipe;
+        //uint8 necklace;
+        //uint8 pipe;
     }
 
     struct Sheriff {
-        uint8 chain;
+        //uint8 chain;
         uint8 mustache;
         uint8 stars;
         uint8 alphaIndex;
