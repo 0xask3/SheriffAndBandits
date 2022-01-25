@@ -172,6 +172,8 @@ contract SheriffAndBandit is
         (t,s,b) = selectTraits(seed);
         if (existingCombinations[structToHash(t,s,b)] == 0) {
             tokenTraits[tokenId] = t;
+            banditTraits[tokenId] = b;
+            sheriffTraits[tokenId] = s;
             existingCombinations[structToHash(t,s,b)] = tokenId;
             return (t,s,b);
         }
@@ -239,19 +241,13 @@ contract SheriffAndBandit is
             t.hat = selectTrait(uint16(seed & 0xFFFF), 4);
 
             seed >>= 16;
-            b.cigarette = selectTrait(uint16(seed & 0xFFFF), 5);
+            b.handcuff = selectTrait(uint16(seed & 0xFFFF), 5);
 
             seed >>= 16;
-            b.handcuff = selectTrait(uint16(seed & 0xFFFF), 6);
+            b.mask = selectTrait(uint16(seed & 0xFFFF), 6);
 
             seed >>= 16;
-            b.mask = selectTrait(uint16(seed & 0xFFFF), 7);
-
-            // seed >>= 16;
-            // b.necklace = selectTrait(uint16(seed & 0xFFFF), 8);
-
-            // seed >>= 16;
-            // b.pipe = selectTrait(uint16(seed & 0xFFFF), 9);
+            b.necklace = selectTrait(uint16(seed & 0xFFFF), 7);
 
         } else {
             seed >>= 16;
@@ -270,7 +266,7 @@ contract SheriffAndBandit is
             t.hat = selectTrait(uint16(seed & 0xFFFF), 12);
 
             // seed >>= 16;
-            // s.chain = selectTrait(uint16(seed & 0xFFFF), 15);
+            // s.chain = selectTrait(uint16(seed & 0xFFFF), 13);
 
             seed >>= 16;
             s.mustache = selectTrait(uint16(seed & 0xFFFF), 13);
@@ -304,12 +300,10 @@ contract SheriffAndBandit is
                         t.eyes,
                         t.gun,
                         t.hat,
-                        b.cigarette,
                         b.handcuff,
                         b.mask,
-                        //b.necklace,
-                        //b.pipe,
-                        //s.chain,
+                        b.necklace,
+                        // s.chain,
                         s.mustache,
                         s.stars,
                         s.alphaIndex

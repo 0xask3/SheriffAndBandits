@@ -5,11 +5,9 @@ pragma solidity ^0.8.0;
 interface ISheriffAndBandit {
 
     struct Bandit {
-        uint8 cigarette;
         uint8 handcuff;
         uint8 mask;
-        //uint8 necklace;
-        //uint8 pipe;
+        uint8 necklace;
     }
 
     struct Sheriff {

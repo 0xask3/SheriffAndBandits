@@ -27,6 +27,7 @@ module.exports = async function(deployer, network, accounts) {
 
   await traitsInstance.setGame(sandbInstance.address);
   await sandbInstance.setRandomSource(randomInstance.address);
+  await randomInstance.setGame(sandbInstance.address);
 
   await deployer.deploy(Train, sandbInstance.address, westInstance.address);
   const trainInstance = await Train.deployed();

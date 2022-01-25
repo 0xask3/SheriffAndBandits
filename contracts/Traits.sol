@@ -28,9 +28,9 @@ contract Traits3 is Ownable, ITraits {
         "BanditEyes",
         "BanditGun",
         "BanditHat",
-        "BanditCigarette",
         "BanditHandcuff",
         "BanditMask",
+        "BanditNecklace",
         "SheriffUniform",
         "SheriffHair",
         "SheriffEyes",
@@ -170,11 +170,9 @@ contract Traits3 is Ownable, ITraits {
                     drawTrait(traitData[2][t.eyes % traitCountForType[2]]),
                     drawTrait(traitData[3][t.gun % traitCountForType[3]]),
                     drawTrait(traitData[4][t.hat % traitCountForType[4]]),
-                    drawTrait(traitData[5][b.cigarette % traitCountForType[5]]),
-                    drawTrait(traitData[6][b.handcuff % traitCountForType[6]]),
-                    drawTrait(traitData[7][b.mask % traitCountForType[7]])
-                    //drawTrait(traitData[8][b.necklace % traitCountForType[8]])
-                    //drawTrait(traitData[9][b.pipe % traitCountForType[9]])
+                    drawTrait(traitData[5][b.handcuff % traitCountForType[5]]),
+                    drawTrait(traitData[6][b.mask % traitCountForType[6]]),
+                    drawTrait(traitData[7][b.necklace % traitCountForType[7]])
                 )
             );
         } else {
@@ -273,29 +271,19 @@ contract Traits3 is Ownable, ITraits {
                     ",",
                     attributeForTypeAndValue(
                         _traitTypes[5],
-                        traitData[5][b.cigarette % traitCountForType[5]].name
+                        traitData[5][b.handcuff % traitCountForType[5]].name
                     ),
                     ",",
                     attributeForTypeAndValue(
                         _traitTypes[6],
-                        traitData[6][b.handcuff % traitCountForType[6]].name
+                        traitData[6][b.mask % traitCountForType[6]].name
                     ),
                     ",",
                     attributeForTypeAndValue(
                         _traitTypes[7],
-                        traitData[7][b.mask % traitCountForType[7]].name
+                        traitData[7][b.necklace % traitCountForType[7]].name
                     ),
                     ","
-                    // attributeForTypeAndValue(
-                    //     _traitTypes[8],
-                    //     traitData[8][b.necklace % traitCountForType[8]].name
-                    // ),
-                    // ","
-                    // attributeForTypeAndValue(
-                    //     _traitTypes[9],
-                    //     traitData[9][b.pipe % traitCountForType[9]].name
-                    // ),
-                    // ","
                 )
             );
         } else {
