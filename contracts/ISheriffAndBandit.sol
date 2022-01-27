@@ -3,9 +3,8 @@
 pragma solidity ^0.8.0;
 
 interface ISheriffAndBandit {
-
     struct Bandit {
-        uint8 handcuff;
+        uint8 accessories;
         uint8 mask;
         uint8 necklace;
     }
@@ -28,5 +27,13 @@ interface ISheriffAndBandit {
     }
 
     function getPaidTokens() external view returns (uint256);
-    function getTokenTraits(uint256 tokenId) external view returns (BanditSheriff memory, Sheriff memory, Bandit memory);
+
+    function getTokenTraits(uint256 tokenId)
+        external
+        view
+        returns (
+            BanditSheriff memory,
+            Sheriff memory,
+            Bandit memory
+        );
 }

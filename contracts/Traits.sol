@@ -28,7 +28,7 @@ contract Traits3 is Ownable, ITraits {
         "BanditEyes",
         "BanditGun",
         "BanditHat",
-        "BanditHandcuff",
+        "BanditAccessories",
         "BanditMask",
         "BanditNecklace",
         "SheriffUniform",
@@ -170,7 +170,9 @@ contract Traits3 is Ownable, ITraits {
                     drawTrait(traitData[2][t.eyes % traitCountForType[2]]),
                     drawTrait(traitData[3][t.gun % traitCountForType[3]]),
                     drawTrait(traitData[4][t.hat % traitCountForType[4]]),
-                    drawTrait(traitData[5][b.handcuff % traitCountForType[5]]),
+                    drawTrait(
+                        traitData[5][b.accessories % traitCountForType[5]]
+                    ),
                     drawTrait(traitData[6][b.mask % traitCountForType[6]]),
                     drawTrait(traitData[7][b.necklace % traitCountForType[7]])
                 )
@@ -184,7 +186,6 @@ contract Traits3 is Ownable, ITraits {
                     drawTrait(traitData[10][t.eyes % traitCountForType[10]]),
                     drawTrait(traitData[11][t.gun % traitCountForType[11]]),
                     drawTrait(traitData[12][t.hat % traitCountForType[12]]),
-                    // drawTrait(traitData[13][s.chain % traitCountForType[13]]),
                     drawTrait(
                         traitData[13][s.mustache % traitCountForType[13]]
                     ),
@@ -237,8 +238,8 @@ contract Traits3 is Ownable, ITraits {
     {
         (
             ISheriffAndBandit.BanditSheriff memory t,
-             ISheriffAndBandit.Sheriff memory s,
-             ISheriffAndBandit.Bandit memory b
+            ISheriffAndBandit.Sheriff memory s,
+            ISheriffAndBandit.Bandit memory b
         ) = sheriffAndBandit.getTokenTraits(tokenId);
         string memory traits;
         if (t.isBandit) {
@@ -271,7 +272,7 @@ contract Traits3 is Ownable, ITraits {
                     ",",
                     attributeForTypeAndValue(
                         _traitTypes[5],
-                        traitData[5][b.handcuff % traitCountForType[5]].name
+                        traitData[5][b.accessories % traitCountForType[5]].name
                     ),
                     ",",
                     attributeForTypeAndValue(

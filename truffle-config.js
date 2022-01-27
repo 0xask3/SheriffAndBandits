@@ -34,7 +34,6 @@ module.exports = {
   bsctestnet: {
    provider: () =>
     new HDWalletProvider(process.env.MNEMONIC, process.env.BSCTESTNET),
-   gas: 15000000, 
    network_id: 97,
    skipDryRun: true,
   },

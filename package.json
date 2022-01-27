@@ -8,7 +8,8 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "upload": "truffle exec scripts\\uploadTraits.js --network bsctestnet"
+    "upload": "truffle exec scripts\\uploadTraits.js --network bsctestnet",
+    "verify": "truffle run verify SheriffAndBandit WEST Train3 Random Traits3 --network bsctestnet"
   },
   "author": "Grim",
   "license": "ISC",
