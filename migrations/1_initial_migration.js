@@ -15,7 +15,7 @@ module.exports = async function(deployer, network, accounts) {
   const randomInstance = await Random.deployed();
 
   await westInstance.addController(accounts[0]);
-  await westInstance.mint(accounts[0],BigInt(10000e18)); // Mint 10,000 west to owner
+  await westInstance.mint(accounts[0], BigInt(10000e18)); // Mint 10,000 west to owner
 
   await deployer.deploy(
     SAndB,
@@ -33,4 +33,5 @@ module.exports = async function(deployer, network, accounts) {
   const trainInstance = await Train.deployed();
 
   await sandbInstance.setTrain(trainInstance.address);
+  await westInstance.addController(trainInstance.address);
 };

@@ -20,6 +20,12 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         address owner;
     }
 
+    struct UserStake {
+        uint256[] tokenIds;
+        mapping(uint256 => uint256) idToIndex;
+        uint256 counter;
+    }
+
     event TokenStaked(address owner, uint256 tokenId, uint256 value);
     event BanditClaimed(uint256 tokenId, uint256 earned, bool unstaked);
     event SheriffClaimed(uint256 tokenId, uint256 earned, bool unstaked);
@@ -33,6 +39,8 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     mapping(uint256 => Stake) public train;
     // maps alpha to all Sheriff stakes with that alpha
     mapping(uint256 => Stake[]) public pack;
+    // maps user address to all stakes he made
+    mapping(address => UserStake) public userStake;
     // tracks location of each Sheriff in Pack
     mapping(uint256 => uint256) public packIndices;
     // total alpha scores staked
@@ -111,6 +119,8 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
             "DONT GIVE YOUR TOKENS AWAY"
         );
 
+        UserStake storage user = userStake[msg.sender];
+
         for (uint256 i = 0; i < tokenIds.length; i++) {
             if (tokenIds[i] == 0) {
                 continue;
@@ -124,6 +134,10 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
                 );
                 game.transferFrom(_msgSender(), address(this), tokenIds[i]);
             }
+
+            user.tokenIds.push(tokenIds[i]);
+            user.idToIndex[tokenIds[i]] = user.counter;
+            user.counter++;
 
             if (isBandit(tokenIds[i])) _addBanditToTrain(account, tokenIds[i]);
             else _addSheriffToPack(account, tokenIds[i]);
@@ -209,7 +223,15 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         require(canClaim, "Claim deactive");
 
         uint256 owed = 0;
+        UserStake storage user = userStake[msg.sender];
+
         for (uint256 i = 0; i < tokenIds.length; i++) {
+            uint256 index = user.idToIndex[tokenIds[i]];
+            uint256 len = user.tokenIds.length;
+            user.tokenIds[index] = user.tokenIds[len - 1];
+            user.tokenIds.pop();
+            user.counter--;
+
             if (isBandit(tokenIds[i]))
                 owed += _claimBanditFromTrain(tokenIds[i], unstake);
             else owed += _claimSheriffFromPack(tokenIds[i], unstake);
