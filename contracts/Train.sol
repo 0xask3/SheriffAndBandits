@@ -40,7 +40,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     // maps alpha to all Sheriff stakes with that alpha
     mapping(uint256 => Stake[]) public pack;
     // maps user address to all stakes he made
-    mapping(address => UserStake) public userStake;
+    mapping(address => UserStake) private userStake;
     // tracks location of each Sheriff in Pack
     mapping(uint256 => uint256) public packIndices;
     // total alpha scores staked
@@ -444,6 +444,19 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
      */
     function isBandit(uint256 tokenId) public view returns (bool bandit) {
         (bandit, , , , , ) = game.tokenTraits(tokenId);
+    }
+
+    /**
+    *
+    * Get users stakes 
+    * @param addr Address of user
+    * @return count - Number of tokens staked
+    * @return ids - ids of staked tokens
+    *
+    */
+    function getUserStakes(address addr) external view returns (uint256 count, uint256[] memory ids) {
+        UserStake storage user = userStake[addr];
+        return(user.counter,user.tokenIds);
     }
 
     /**
