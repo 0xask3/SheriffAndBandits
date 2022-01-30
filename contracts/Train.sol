@@ -24,6 +24,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         uint256[] tokenIds;
         mapping(uint256 => uint256) idToIndex;
         uint256 counter;
+        uint256 totalClaimed;
     }
 
     event TokenStaked(address owner, uint256 tokenId, uint256 value);
@@ -237,6 +238,8 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
             else owed += _claimSheriffFromPack(tokenIds[i], unstake);
         }
         if (owed == 0) return;
+
+        user.totalClaimed += owed;
         west.mint(_msgSender(), owed);
     }
 
@@ -447,16 +450,67 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     }
 
     /**
-    *
-    * Get users stakes 
-    * @param addr Address of user
-    * @return count - Number of tokens staked
-    * @return ids - ids of staked tokens
-    *
-    */
-    function getUserStakes(address addr) external view returns (uint256 count, uint256[] memory ids) {
+     *
+     * Get users stakes
+     * @param addr Address of user
+     * @return count - Number of tokens staked
+     * @return ids - ids of staked tokens
+     *
+     */
+    function getUserStakes(address addr)
+        external
+        view
+        returns (uint256 count, uint256[] memory ids, uint256 totalClaimed)
+    {
         UserStake storage user = userStake[addr];
-        return(user.counter,user.tokenIds);
+        return (user.counter, user.tokenIds,user.totalClaimed);
+    }
+
+    /**
+     *
+     * Get users stakes
+     * @param _user Address of user
+     * @return claimable - Amount to be claimed
+     *
+     */
+    function getClaimAmount(address _user)
+        external
+        view
+        returns (uint256 claimable)
+    {
+        UserStake storage user = userStake[_user];
+
+        for (uint8 i = 0; i < user.tokenIds.length; i++) {
+            claimable += getClaimAmountPerToken(user.tokenIds[i]);
+        }
+    }
+
+    function getClaimAmountPerToken(uint256 _tokenId)
+        public
+        view
+        returns (uint256 amount)
+    {
+        uint256 id = _tokenId;
+        if (isBandit(id)) {
+            Stake memory stake = train[id];
+            if (totalWestEarned < MAXIMUM_GLOBAL_WEST) {
+                amount =
+                    ((block.timestamp - stake.value) * DAILY_WEST_RATE) /
+                    1 days;
+            } else if (stake.value > lastClaimTimestamp) {
+                amount = 0;
+                // $WEST production stopped already
+            } else {
+                amount =
+                    ((lastClaimTimestamp - stake.value) * DAILY_WEST_RATE) /
+                    1 days;
+                // stop earning additional $WEST if it's all been earned
+            }
+        } else {
+            uint256 alpha = _alphaForSheriff(id);
+            Stake memory stake = pack[alpha][packIndices[id]];
+            amount = (alpha) * (westPerAlpha - stake.value);
+        }
     }
 
     /**

@@ -34,4 +34,5 @@ module.exports = async function(deployer, network, accounts) {
 
   await sandbInstance.setTrain(trainInstance.address);
   await westInstance.addController(trainInstance.address);
+  await trainInstance.setClaiming(true);
 };
