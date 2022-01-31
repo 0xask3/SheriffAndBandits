@@ -30,6 +30,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     event TokenStaked(address owner, uint256 tokenId, uint256 value);
     event BanditClaimed(uint256 tokenId, uint256 earned, bool unstaked);
     event SheriffClaimed(uint256 tokenId, uint256 earned, bool unstaked);
+    event TotalClaimed(address owner, uint256 owed);
 
     // reference to the SheriffAndBandit NFT contract
     SheriffAndBandit game;
@@ -237,10 +238,12 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
                 owed += _claimBanditFromTrain(tokenIds[i], unstake);
             else owed += _claimSheriffFromPack(tokenIds[i], unstake);
         }
+
         if (owed == 0) return;
 
         user.totalClaimed += owed;
         west.mint(_msgSender(), owed);
+        emit TotalClaimed(_msgSender(), owed);
     }
 
     /**
@@ -460,10 +463,14 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     function getUserStakes(address addr)
         external
         view
-        returns (uint256 count, uint256[] memory ids, uint256 totalClaimed)
+        returns (
+            uint256 count,
+            uint256[] memory ids,
+            uint256 totalClaimed
+        )
     {
         UserStake storage user = userStake[addr];
-        return (user.counter, user.tokenIds,user.totalClaimed);
+        return (user.counter, user.tokenIds, user.totalClaimed);
     }
 
     /**

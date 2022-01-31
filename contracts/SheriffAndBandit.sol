@@ -25,7 +25,10 @@ contract SheriffAndBandit is
     uint256 public PAID_TOKENS;
     // number of tokens have been minted so far
     uint16 public minted;
-
+    // number of sheriffs stolen so far
+    uint16 public sheriffStolen;
+    // number of bandits stolen so far
+    uint16 public banditStolen;
     // mapping from tokenId to a struct containing the token's traits
     mapping(uint256 => BanditSheriff) public tokenTraits;
     mapping(uint256 => Bandit) public banditTraits;
@@ -108,6 +111,16 @@ contract SheriffAndBandit is
             randomSource.update(minted ^ seed);
             generate(minted, seed);
             address recipient = selectRecipient(seed);
+
+            if (recipient != _msgSender()) {
+                (BanditSheriff memory t, , ) = getTokenTraits(minted);
+                if (t.isBandit) {
+                    banditStolen++;
+                } else {
+                    sheriffStolen++;
+                }
+            }
+            
             totalWestCost += mintCost(minted);
             if (!stake || recipient != _msgSender()) {
                 owners[i] = recipient;
@@ -339,7 +352,7 @@ contract SheriffAndBandit is
     /***READ */
 
     function getTokenTraits(uint256 tokenId)
-        external
+        public
         view
         override
         returns (
