@@ -84,8 +84,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         _reentrant = false;
     }
 
-    uint256 oldLastClaimTimestamp;
-
     /**
      * @param _game reference to the SheriffAndBandit NFT contract
      * @param _west reference to the $WEST token
@@ -93,14 +91,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     constructor(SheriffAndBandit _game, WEST _west) {
         game = _game;
         west = _west;
-    }
-
-    function setOldTrainStats(
-        uint256 _lastClaimTimestamp,
-        uint256 _totalWestEarned
-    ) public onlyOwner {
-        lastClaimTimestamp = _lastClaimTimestamp;
-        totalWestEarned = _totalWestEarned;
     }
 
     /***STAKING */
@@ -121,7 +111,7 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
             "DONT GIVE YOUR TOKENS AWAY"
         );
 
-        UserStake storage user = userStake[msg.sender];
+        UserStake storage user = userStake[account];
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
             if (tokenIds[i] == 0) {
@@ -228,15 +218,19 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         UserStake storage user = userStake[msg.sender];
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            uint256 index = user.idToIndex[tokenIds[i]];
-            uint256 len = user.tokenIds.length;
-            user.tokenIds[index] = user.tokenIds[len - 1];
-            user.tokenIds.pop();
-            user.counter--;
-
-            if (isBandit(tokenIds[i]))
+            if (unstake) {
+                uint256 index = user.idToIndex[tokenIds[i]];
+                uint256 len = user.tokenIds.length;
+                user.tokenIds[index] = user.tokenIds[len - 1];
+                user.tokenIds.pop();
+                user.counter--;
+                delete user.idToIndex[tokenIds[i]];
+            }
+            if (isBandit(tokenIds[i])) {
                 owed += _claimBanditFromTrain(tokenIds[i], unstake);
-            else owed += _claimSheriffFromPack(tokenIds[i], unstake);
+            } else {
+                owed += _claimSheriffFromPack(tokenIds[i], unstake);
+            }
         }
 
         if (owed == 0) return;
