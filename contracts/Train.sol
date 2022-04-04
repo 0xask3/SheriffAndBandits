@@ -20,13 +20,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         address owner;
     }
 
-    struct UserStake {
-        uint256[] tokenIds;
-        mapping(uint256 => uint256) idToIndex;
-        uint256 counter;
-        uint256 totalClaimed;
-    }
-
     event TokenStaked(address owner, uint256 tokenId, uint256 value);
     event BanditClaimed(uint256 tokenId, uint256 earned, bool unstaked);
     event SheriffClaimed(uint256 tokenId, uint256 earned, bool unstaked);
@@ -41,8 +34,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
     mapping(uint256 => Stake) public train;
     // maps alpha to all Sheriff stakes with that alpha
     mapping(uint256 => Stake[]) public pack;
-    // maps user address to all stakes he made
-    mapping(address => UserStake) private userStake;
     // tracks location of each Sheriff in Pack
     mapping(uint256 => uint256) public packIndices;
     // total alpha scores staked
@@ -111,8 +102,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
             "DONT GIVE YOUR TOKENS AWAY"
         );
 
-        UserStake storage user = userStake[account];
-
         for (uint256 i = 0; i < tokenIds.length; i++) {
             if (tokenIds[i] == 0) {
                 continue;
@@ -126,10 +115,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
                 );
                 game.transferFrom(_msgSender(), address(this), tokenIds[i]);
             }
-
-            user.tokenIds.push(tokenIds[i]);
-            user.idToIndex[tokenIds[i]] = user.counter;
-            user.counter++;
 
             if (isBandit(tokenIds[i])) _addBanditToTrain(account, tokenIds[i]);
             else _addSheriffToPack(account, tokenIds[i]);
@@ -215,17 +200,8 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
         require(canClaim, "Claim deactive");
 
         uint256 owed = 0;
-        UserStake storage user = userStake[msg.sender];
 
         for (uint256 i = 0; i < tokenIds.length; i++) {
-            if (unstake) {
-                uint256 index = user.idToIndex[tokenIds[i]];
-                uint256 len = user.tokenIds.length;
-                user.tokenIds[index] = user.tokenIds[len - 1];
-                user.tokenIds.pop();
-                user.counter--;
-                delete user.idToIndex[tokenIds[i]];
-            }
             if (isBandit(tokenIds[i])) {
                 owed += _claimBanditFromTrain(tokenIds[i], unstake);
             } else {
@@ -235,7 +211,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
 
         if (owed == 0) return;
 
-        user.totalClaimed += owed;
         west.mint(_msgSender(), owed);
         emit TotalClaimed(_msgSender(), owed);
     }
@@ -444,46 +419,6 @@ contract Train3 is Ownable, IERC721Receiver, Pausable {
      */
     function isBandit(uint256 tokenId) public view returns (bool bandit) {
         (bandit, , , , , ) = game.tokenTraits(tokenId);
-    }
-
-    /**
-     *
-     * Get users stakes
-     * @param addr Address of user
-     * @return count - Number of tokens staked
-     * @return ids - ids of staked tokens
-     *
-     */
-    function getUserStakes(address addr)
-        external
-        view
-        returns (
-            uint256 count,
-            uint256[] memory ids,
-            uint256 totalClaimed
-        )
-    {
-        UserStake storage user = userStake[addr];
-        return (user.counter, user.tokenIds, user.totalClaimed);
-    }
-
-    /**
-     *
-     * Get users stakes
-     * @param _user Address of user
-     * @return claimable - Amount to be claimed
-     *
-     */
-    function getClaimAmount(address _user)
-        external
-        view
-        returns (uint256 claimable)
-    {
-        UserStake storage user = userStake[_user];
-
-        for (uint8 i = 0; i < user.tokenIds.length; i++) {
-            claimable += getClaimAmountPerToken(user.tokenIds[i]);
-        }
     }
 
     function getClaimAmountPerToken(uint256 _tokenId)
